@@ -1,6 +1,5 @@
 package com.codewalnut;
 
-import com.codewalnut.domain.FileTask;
 import com.codewalnut.service.AddressAnalyseService;
 import org.junit.Test;
 
@@ -10,11 +9,17 @@ import org.junit.Test;
 public class AddressAnalyseServiceTest {
 	private AddressAnalyseService service = new AddressAnalyseService();
 
+//	@Test
+//	public void testHandleOneHeight() throws Exception {
+//		FileTask fileTask = new FileTask();
+//		fileTask.setHeight(507739);
+//		Set<String> set = new HashSet<>();
+//		service.handleOneHeight(fileTask, set);
+//	}
+
 	@Test
-	public void testHandleOneHeight() throws Exception {
-		FileTask fileTask = new FileTask();
-		fileTask.setHeight(507738);
-		service.handleOneHeight(fileTask);
+	public void testHandleOneFolder() throws Exception {
+		service.handleOneFolder("D:\\bitcoin_data\\test", null);
 	}
 
 }

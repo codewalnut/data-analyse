@@ -55,6 +55,7 @@
 <loggers>
     <!--过滤掉spring的一些无用的DEBUG信息-->
     <logger name="org.springframework" level="INFO"></logger>
+    <logger name="org.hibernate" level="INFO"></logger>
     <logger name="com.saysth.commons" level="INFO"></logger>
     <root level="all">
         <appender-ref ref="Console"/>
