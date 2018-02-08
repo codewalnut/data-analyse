@@ -43,8 +43,11 @@ public class AddressAnalyseRunner implements ApplicationRunner {
             String savePath = getSingle(args, "savePath", null);
             Assert.isTrue(StringUtils.isNotBlank(folderPath), "parseAddr mast have argument: --parseAddrPath");
             service.handleOneFolder(folderPath, savePath);
-        } else if (StringUtils.equals(action, "something else")) {
-            // to be implement
+        } else if (StringUtils.equals(action, "removeDuplicate")) {
+            String srcPath = getSingle(args, "srcPath", null);
+            String targetPath = getSingle(args, "targetPath", null);
+            Assert.isTrue(StringUtils.isNotBlank(srcPath), "parseAddr mast have argument: --srcPath");
+            service.removeDuplicateAddrForFolder(srcPath, targetPath);
         }
     }
 

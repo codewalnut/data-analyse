@@ -9,7 +9,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Collection;
@@ -138,6 +140,76 @@ public class AddressAnalyseService {
 
         result.setSuccess(true);
         result.setAddrSet(addrSet);
+        return result;
+    }
+
+    public AddressAnalyseResult removeDuplicateAddrForFolder(String srcPath, String targetPath) throws Exception {
+        AddressAnalyseResult result = new AddressAnalyseResult();
+        log.info("removeDuplicateAddrForFolder srcPath {}", srcPath);
+
+        long bgn = System.currentTimeMillis();
+        if (!StringUtils.endsWith(srcPath, File.separator)) {
+            srcPath = srcPath + File.separator;
+        }
+        if (StringUtils.isBlank(targetPath)) {
+            targetPath = srcPath.substring(0, srcPath.length() - 1) + "-distinct" + File.separator;
+        }
+        if (!StringUtils.endsWith(targetPath, File.separator)) {
+            targetPath = targetPath + File.separator;
+        }
+        File dir = new File(srcPath);
+        Collection<File> files = FileUtils.listFiles(dir, new String[]{"txt"}, true);
+
+        Set<String> addrSet = new HashSet<>(files.size());
+
+        for (File file : files) {
+            handleOneAddrFile(file, addrSet);
+        }
+        long end = System.currentTimeMillis();
+
+        log.debug("found {} addrs, {}", addrSet != null ? addrSet.size() : 0, LogUtils.getElapse(bgn, end));
+//        log.debug("Set Size: {}", RamUsageEstimator.humanSizeOf(addrSet));
+
+        File resultFile = new File(targetPath + "addrs.txt");
+        FileUtils.writeLines(resultFile, "UTF-8", addrSet, false);
+
+        result.setSuccess(true);
+        result.setAddrSet(addrSet);
+        return result;
+    }
+
+    public AddressAnalyseResult handleOneAddrFile(File file, Set<String> addrSet) {
+//        log.info("handleOneHeight {}", fileTask.getHeight());
+        AddressAnalyseResult result = new AddressAnalyseResult();
+        result.setSuccess(false);
+
+//        log.debug("Open file as String");
+        String s = null;
+        long bgn = System.currentTimeMillis();
+        try {
+            FileReader reader = new FileReader(file);
+            BufferedReader br = new BufferedReader(reader);
+            String str = null;
+
+            if (addrSet == null) {
+                addrSet = new HashSet<>(1000);
+            }
+
+            while ((str = br.readLine()) != null) {
+                addrSet.add(str);
+            }
+
+            br.close();
+            reader.close();
+        } catch (IOException ex) {
+            return result;
+        }
+        long end = System.currentTimeMillis();
+
+        result.setSuccess(true);
+        result.setAddrSet(addrSet);
+        log.debug("found {} addrs in {}, {}", addrSet.size(), file.getName(), LogUtils.getElapse(bgn, end));
+//        log.debug("Set Size: {}", RamUsageEstimator.humanSizeOf(addrSet));
         return result;
     }
 

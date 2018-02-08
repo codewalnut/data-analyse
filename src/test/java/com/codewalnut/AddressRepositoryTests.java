@@ -1,12 +1,10 @@
 package com.codewalnut;
 
 import com.codewalnut.domain.Address;
-import com.codewalnut.domain.AddressRepository;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -18,14 +16,14 @@ import org.springframework.test.context.junit4.SpringRunner;
 public class AddressRepositoryTests {
     private Logger log = LoggerFactory.getLogger(ApplicationTests.class);
 
-    @Autowired
-    private AddressRepository addressRepository;
+//    @Autowired
+//    private AddressRepository addressRepository;
 
     @Test
     public void test() {
         Address address = new Address();
-        address.setAddr("dfsdf");
-        addressRepository.save(address);
+//        address.setAddr("dfsdf");
+//        addressRepository.save(address);
     }
 
 }
