@@ -1,13 +1,18 @@
 package com.codewalnut.service;
 
 import com.carrotsearch.sizeof.RamUsageEstimator;
+import com.codewalnut.domain.Address;
 import com.codewalnut.domain.AddressAnalyseResult;
+import com.codewalnut.domain.AddressRepository;
 import com.saysth.commons.utils.LogUtils;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.LineIterator;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -28,28 +33,71 @@ public class AddressAnalyseService {
     private static final String HEIGHT = "\"height\":";
     private static final String ADDR = "\"addr\":";
 
-//    @Autowired
-//    private AddressRepository addressRepository;
+    @Autowired
+    private AddressRepository addressRepository;
 
     /**
      * 保存数据库
      *
      * @param addressses
      */
-//    @Transactional(rollbackFor = Exception.class)
-//    public void batchSave(Set<Address> addressses) {
-//        log.info("Saving {} addresses...", addressses.size());
-//        addressRepository.save(addressses);
-//    }
+    public void batchSave(Set<Address> addressses) {
+        log.info("Saving {} addresses...", addressses.size());
 
-    /**
-     * 抽取需要的内容
-     *
-     * @param s
-     * @param searchStr
-     * @param startPos
-     * @return
-     */
+        // addressRepository.save(addressses); // 看了源码，对内存占用有要求，因为要保存返回值
+        for (Address addr : addressses) {
+            addressRepository.save(addr);
+        }
+    }
+
+    public void save(Address address) {
+        addressRepository.save(address);
+    }
+
+    public void saveAddressToDB(String path) {
+        log.info("saveAddressToDB path {}", path);
+
+        long bgn = System.currentTimeMillis();
+        if (!StringUtils.endsWith(path, File.separator)) {
+            path = path + File.separator;
+        }
+        File dir = new File(path);
+        Collection<File> files = FileUtils.listFiles(dir, null, true);
+
+        int total = 0;
+        for (File file : files) {
+            total += saveOneAddressFileToDB(file);
+        }
+        long end = System.currentTimeMillis();
+
+        log.debug("saved {} rows, {}", total, LogUtils.getElapse(bgn, end));
+    }
+
+    public int saveOneAddressFileToDB(File file) {
+        log.info("saveOneAddressFileToDB({})", file.getName());
+        int count = 0;
+        String[] heightTime = StringUtils.split(file.getName(), '-');
+        Assert.isTrue(heightTime.length == 2, "Expect filename in height-timestamp format!!");
+        int height = Integer.valueOf(heightTime[0]);
+        long time = Long.valueOf(heightTime[0]);
+        try {
+            LineIterator lineIterator = FileUtils.lineIterator(file, "UTF-8");
+            while (lineIterator.hasNext()) {
+                String line = lineIterator.next();
+                Address addr = new Address();
+                addr.setHeight(height);
+                addr.setAddr(line);
+                save(addr);
+                count++;
+            }
+            return count;
+        } catch (IOException ex) {
+            log.error("Wrong file", ex);
+            return count;
+        }
+    }
+
+    // 抽取需要的内容
     private String getFirstFromJson(String s, String searchStr, int startPos) {
         int start = StringUtils.indexOf(s, searchStr, startPos) + searchStr.length();
         int end = StringUtils.indexOf(s, ",", start);
@@ -57,7 +105,7 @@ public class AddressAnalyseService {
     }
 
     /**
-     * 处理一个区块文件
+     * 处理一个区块Json文件
      *
      * @param file
      * @param addrSet
@@ -103,7 +151,7 @@ public class AddressAnalyseService {
     }
 
     /**
-     * 处理一个目录下的区块文件
+     * 处理一个目录下的区块Json文件
      *
      * @param path
      * @param savePath
@@ -143,6 +191,14 @@ public class AddressAnalyseService {
         return result;
     }
 
+    /**
+     * 将某目录下的地址json文件的内容去重复
+     *
+     * @param srcPath
+     * @param targetPath
+     * @return
+     * @throws Exception
+     */
     public AddressAnalyseResult removeDuplicateAddrForFolder(String srcPath, String targetPath) throws Exception {
         AddressAnalyseResult result = new AddressAnalyseResult();
         log.info("removeDuplicateAddrForFolder srcPath {}", srcPath);
