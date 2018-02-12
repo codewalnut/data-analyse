@@ -60,6 +60,7 @@ public class AddressAnalyseService {
 	// 把一个文件的内容写入levelDB
 	public void saveOneAddressFileToLevelDB(DB db, File file) {
 //        log.info("saveOneAddressFileToLevelDB({})", file.getName());
+		long bgn = System.currentTimeMillis();
 		Block block = null;
 		try {
 			String json = FileUtils.readFileToString(file, Constants.UTF8);
@@ -127,6 +128,8 @@ public class AddressAnalyseService {
 				}
 			}
 		}
+		long end = System.currentTimeMillis();
+		log.info("finished block: {}, tx: {}, {}", height, txs.size(), LogUtils.getElapse(bgn, end));
 	}
 
 	// 抽取需要的内容
