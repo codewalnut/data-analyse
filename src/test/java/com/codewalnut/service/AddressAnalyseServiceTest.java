@@ -1,4 +1,4 @@
-package com.codewalnut;
+package com.codewalnut.service;
 
 import com.codewalnut.service.AddressAnalyseService;
 import org.junit.Test;

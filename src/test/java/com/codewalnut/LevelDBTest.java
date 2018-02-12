@@ -25,6 +25,7 @@ public class LevelDBTest {
             db.put("key-02".getBytes(charset), "value-02".getBytes(charset));
             db.put("key-03".getBytes(charset), "value-03".getBytes(charset));
         }
+        System.out.println(db.get("kelvin".getBytes()));
         db.close();
 
 //        printAll(path);

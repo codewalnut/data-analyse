@@ -20,74 +20,62 @@ import java.util.List;
  */
 @Component
 public class AddressAnalyseRunner implements ApplicationRunner {
-    private static Logger log = LoggerFactory.getLogger(AddressAnalyseRunner.class);
+	private static Logger log = LoggerFactory.getLogger(AddressAnalyseRunner.class);
 
-    @Autowired
-    private AddressAnalyseService service;
+	@Autowired
+	private AddressAnalyseService service;
 
-    /**
-     * action: parseAddr; parseAddrPath, savePath
-     * action: removeDuplicate; srcPath, targetPath
-     * action: saveBlockAddr; addrPath
-     * action: addrToLevelDb; dbPath, filePath
-     *
-     * @param args
-     * @throws Exception
-     */
-    @Override
-    public void run(ApplicationArguments args) throws Exception {
-        // 参数处理
-        String action = getSingle(args, "action");
-        Assert.isTrue(StringUtils.isNotBlank(action), "--action must be assigned!");
+	/**
+	 * action: parseAddr; parseAddrPath, savePath
+	 * action: removeDuplicate; srcPath, targetPath
+	 * action: addrToLevelDb; dbPath, filePath, heightRange
+	 *
+	 * @param args
+	 * @throws Exception
+	 */
+	@Override
+	public void run(ApplicationArguments args) throws Exception {
+		// 参数处理
+		String action = getSingle(args, "action");
+		Assert.isTrue(StringUtils.isNotBlank(action), "--action must be assigned!");
 
-        if (StringUtils.equals(action, "parseAddr")) { // 处理解析地址
-            String folderPath = getSingle(args, "parseAddrPath");
-            String savePath = getSingle(args, "savePath", null);
-            Assert.isTrue(StringUtils.isNotBlank(folderPath), "parseAddr mast have argument: --parseAddrPath");
-            service.handleOneFolder(folderPath, savePath);
-        } else if (StringUtils.equals(action, "removeDuplicate")) {
-            String srcPath = getSingle(args, "srcPath", null);
-            String targetPath = getSingle(args, "targetPath", null);
-            Assert.isTrue(StringUtils.isNotBlank(srcPath), "parseAddr mast have argument: --srcPath");
-            service.removeDuplicateAddrForFolder(srcPath, targetPath);
-        } else if (StringUtils.equals(action, "saveBlockAddr")) {
-            String folderPath = getSingle(args, "addrPath", null);
-            service.saveAddressToDB(folderPath);
-        } else if (StringUtils.equals(action, "addrToLevelDb")) {
-            String dbPath = getSingle(args, "dbPath", null);
-            String filePath = getSingle(args, "filePath", null);
-            DB db = LevelDBUtils.openLevelDB(dbPath);
-            service.saveAddressToLevelDB(db, filePath);
-            db.close();
-        }
-    }
+		if (StringUtils.equals(action, "parseAddr")) { // 处理解析地址
+			String folderPath = getSingle(args, "parseAddrPath");
+			String savePath = getSingle(args, "savePath", null);
+			Assert.isTrue(StringUtils.isNotBlank(folderPath), "parseAddr mast have argument: --parseAddrPath");
+			service.handleOneFolder(folderPath, savePath);
+		} else if (StringUtils.equals(action, "removeDuplicate")) {
+			String srcPath = getSingle(args, "srcPath", null);
+			String targetPath = getSingle(args, "targetPath", null);
+			Assert.isTrue(StringUtils.isNotBlank(srcPath), "parseAddr mast have argument: --srcPath");
+			service.removeDuplicateAddrForFolder(srcPath, targetPath);
+		} else if (StringUtils.equals(action, "addrToLevelDb")) {
+			String dbPath = getSingle(args, "dbPath", null);
+			String filePath = getSingle(args, "filePath", null);
+			String heightRange = getSingle(args, "heightRange", null);
+			String[] ss = StringUtils.split(heightRange, '-');
+			Assert.isTrue(ss.length == 2, "Invalid arguments: --heightRange");
+			int from = Integer.valueOf(ss[0]);
+			int to = Integer.valueOf(ss[1]);
+			DB db = LevelDBUtils.openLevelDB(dbPath);
+			service.saveAddressToLevelDB(db, filePath, from, to);
+			db.close();
+		}
+	}
 
-    //    private ThreadPoolTaskExecutor getAsyncExecutor(int poolSize) {
-//        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-//        executor.setCorePoolSize(poolSize); // 线程池最小
-//        executor.setMaxPoolSize(poolSize); // 线程池最大
-//        executor.setQueueCapacity(200000); // 线程等待队列长度
-//        executor.setKeepAliveSeconds(30); // 空闲线程释放等待时间
-//        executor.setAwaitTerminationSeconds(10);
-//        executor.setWaitForTasksToCompleteOnShutdown(true);
-////        executor.setDaemon(true);
-//        executor.initialize();
-//        return executor;
-//    }
-//
+	// 解析命令行参数
+	private String getSingle(ApplicationArguments arguments, String name) {
+		return getSingle(arguments, name, null);
+	}
 
-    private String getSingle(ApplicationArguments arguments, String name) {
-        return getSingle(arguments, name, null);
-    }
-
-    // 读取唯一的一个还这么麻烦
-    private String getSingle(ApplicationArguments arguments, String name, String defaultValue) {
-        List<String> list = arguments.getOptionValues(name);
-        if (CollectionUtils.isNotEmpty(list)) {
-            return list.get(0);
-        } else {
-            return defaultValue;
-        }
-    }
+	// 解析命令行参数
+	private String getSingle(ApplicationArguments arguments, String name, String defaultValue) {
+		List<String> list = arguments.getOptionValues(name);
+		if (CollectionUtils.isNotEmpty(list)) {
+			return list.get(0);
+		} else {
+			return defaultValue;
+		}
+	}
 
 }

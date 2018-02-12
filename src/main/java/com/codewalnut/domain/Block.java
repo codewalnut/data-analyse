@@ -1,5 +1,7 @@
 package com.codewalnut.domain;
 
+import java.util.List;
+
 /**
  * 区块
  * Created by Weway-RG001 on 2018-02-05.
@@ -42,7 +44,7 @@ public class Block implements BaseEntity {
 //    @Column
 //    private boolean mainChain;
 //    @Column
-//    private long height;
+    private long height;
 //    @JSONField(name = "received_time")
 ////    @Column
 //    @Transient
@@ -53,7 +55,7 @@ public class Block implements BaseEntity {
 //    @Column(length = 64)
 //    private String relayedBy;
 //    @Transient
-//    private List<Transaction> tx;
+    private List<Transaction> tx;
 //
 //    public int getId() {
 //        return id;
@@ -159,13 +161,13 @@ public class Block implements BaseEntity {
 //        this.mainChain = mainChain;
 //    }
 //
-//    public long getHeight() {
-//        return height;
-//    }
-//
-//    public void setHeight(long height) {
-//        this.height = height;
-//    }
+    public long getHeight() {
+        return height;
+    }
+
+    public void setHeight(long height) {
+        this.height = height;
+    }
 //
 //    public long getReceivedTime() {
 //        return receivedTime;
@@ -183,13 +185,13 @@ public class Block implements BaseEntity {
 //        this.relayedBy = relayedBy;
 //    }
 //
-//    public List<Transaction> getTx() {
-//        return tx;
-//    }
-//
-//    public void setTx(List<Transaction> tx) {
-//        this.tx = tx;
-//    }
+    public List<Transaction> getTx() {
+        return tx;
+    }
+
+    public void setTx(List<Transaction> tx) {
+        this.tx = tx;
+    }
 //
 //    public Date getDatetime() {
 //        return datetime;

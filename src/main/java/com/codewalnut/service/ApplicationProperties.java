@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 /**
  * Created by Weway-RG001 on 2018-02-06 18:35.
  */
-@Component
+//@Component
 public class ApplicationProperties {
 //    @Value("${crawler.browser.user-agent}")
 //    private String crawlerBrowserUserAgent;

@@ -7,9 +7,9 @@ import org.springframework.stereotype.Service;
 /**
  * Created by Weway-RG001 on 2018-02-05.
  */
-@Service
+//@Service
 public class BlockService {
-    private Logger log = LoggerFactory.getLogger(BlockService.class);
+//    private Logger log = LoggerFactory.getLogger(BlockService.class);
 
 //    @Autowired
 //    private BlockRepository blockRepository;
