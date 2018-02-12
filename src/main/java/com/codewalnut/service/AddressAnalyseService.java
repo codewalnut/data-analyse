@@ -4,10 +4,13 @@ import com.carrotsearch.sizeof.RamUsageEstimator;
 import com.codewalnut.domain.Address;
 import com.codewalnut.domain.AddressAnalyseResult;
 import com.codewalnut.domain.AddressRepository;
+import com.codewalnut.utils.Constants;
 import com.saysth.commons.utils.LogUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
 import org.apache.commons.lang3.StringUtils;
+import org.iq80.leveldb.DB;
+import org.iq80.leveldb.WriteBatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +21,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -52,6 +54,66 @@ public class AddressAnalyseService {
 
     public void save(Address address) {
         addressRepository.save(address);
+    }
+
+    // 把路径下的地址文件遍历，然后写入LevelDB
+    public void saveAddressToLevelDB(DB db, String path) {
+        log.info("saveAddressToLevelDB path {}", path);
+
+        long bgn = System.currentTimeMillis();
+        if (!StringUtils.endsWith(path, File.separator)) {
+            path = path + File.separator;
+        }
+        File dir = new File(path);
+        Collection<File> files = FileUtils.listFiles(dir, null, true);
+
+        int total = 0;
+        for (File file : files) {
+            total += saveOneAddressFileToLevelDB(db, file);
+        }
+        long end = System.currentTimeMillis();
+
+        log.debug("saved {} rows, {}", total, LogUtils.getElapse(bgn, end));
+    }
+
+    // 把一个文件的内容写入levelDB
+    public int saveOneAddressFileToLevelDB(DB db, File file) {
+//        log.info("saveOneAddressFileToLevelDB({})", file.getName());
+        int count = 0;
+        String[] heightTime = StringUtils.split(file.getName(), '-');
+        Assert.isTrue(heightTime.length == 2, "Expect filename in height-timestamp format!!");
+        int height = Integer.valueOf(heightTime[0]);
+        // long time = Long.valueOf(heightTime[0]);
+
+        LineIterator lineIterator = null;
+        try {
+            lineIterator = FileUtils.lineIterator(file, "UTF-8");
+        } catch (IOException ex) {
+            log.error("Wrong file", ex);
+            return 0;
+        }
+
+        int totalLineCnt = 0;
+        int successCnt = 0;
+        while (lineIterator.hasNext()) {
+            try {
+                totalLineCnt++;
+                String line = lineIterator.next();
+                // batch write
+                WriteBatch writeBatch = db.createWriteBatch();
+                writeBatch.put(line.getBytes(Constants.UTF8), (height + "").getBytes(Constants.UTF8));
+                db.write(writeBatch);
+                writeBatch.close();
+                successCnt++;
+            } catch (Exception ex) {
+                log.error("read line to leveldb failed", ex);
+                return successCnt;
+            }
+        }
+        if (totalLineCnt != successCnt) {
+            log.error("Not import all line to levelDB for {}", file.getName());
+        }
+        return successCnt;
     }
 
     public void saveAddressToDB(String path) {
@@ -119,7 +181,7 @@ public class AddressAnalyseService {
 //        log.debug("Open file as String");
         String s = null;
         try {
-            s = FileUtils.readFileToString(file, Charset.forName("UTF-8"));
+            s = FileUtils.readFileToString(file, Constants.UTF8);
         } catch (IOException ex) {
             return result;
         }
@@ -192,7 +254,7 @@ public class AddressAnalyseService {
     }
 
     /**
-     * 将某目录下的地址json文件的内容去重复
+     * 将某目录下的地址地址文件的内容去重复，合并成一个文件
      *
      * @param srcPath
      * @param targetPath

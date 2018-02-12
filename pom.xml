@@ -40,6 +40,21 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
+        <!-- level DB -->
+        <dependency>
+            <groupId>org.iq80.leveldb</groupId>
+            <artifactId>leveldb</artifactId>
+            <version>0.10</version>
+        </dependency>
+        <dependency>
+            <groupId>org.iq80.leveldb</groupId>
+            <artifactId>leveldb-api</artifactId>
+            <version>0.10</version>
+        </dependency>
+        <!-- level DB -->
+
+        <!-- MySQL & Jpa & Druid -->
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
@@ -54,7 +69,7 @@
             <artifactId>druid-spring-boot-starter</artifactId>
             <version>1.1.7</version>
         </dependency>
-
+        <!-- MySQL & Jpa & Druid -->
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

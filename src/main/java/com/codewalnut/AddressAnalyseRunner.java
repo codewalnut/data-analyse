@@ -1,9 +1,10 @@
 package com.codewalnut;
 
 import com.codewalnut.service.AddressAnalyseService;
+import com.codewalnut.utils.LevelDBUtils;
 import com.saysth.commons.utils.CollectionUtils;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.iq80.leveldb.DB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +13,6 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
-import java.io.File;
 import java.util.List;
 
 /**
@@ -26,9 +26,10 @@ public class AddressAnalyseRunner implements ApplicationRunner {
     private AddressAnalyseService service;
 
     /**
-     * heightRange
-     * threadPoolSize
-     * savePath
+     * action: parseAddr; parseAddrPath, savePath
+     * action: removeDuplicate; srcPath, targetPath
+     * action: saveBlockAddr; addrPath
+     * action: addrToLevelDb; dbPath, filePath
      *
      * @param args
      * @throws Exception
@@ -36,10 +37,11 @@ public class AddressAnalyseRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) throws Exception {
         // 参数处理
-        String action = getSingle(args, "action", FileUtils.getUserDirectoryPath() + File.separatorChar + "bitcoin_data" + File.separatorChar);
+        String action = getSingle(args, "action");
+        Assert.isTrue(StringUtils.isNotBlank(action), "--action must be assigned!");
 
         if (StringUtils.equals(action, "parseAddr")) { // 处理解析地址
-            String folderPath = getSingle(args, "parseAddrPath", null);
+            String folderPath = getSingle(args, "parseAddrPath");
             String savePath = getSingle(args, "savePath", null);
             Assert.isTrue(StringUtils.isNotBlank(folderPath), "parseAddr mast have argument: --parseAddrPath");
             service.handleOneFolder(folderPath, savePath);
@@ -51,6 +53,12 @@ public class AddressAnalyseRunner implements ApplicationRunner {
         } else if (StringUtils.equals(action, "saveBlockAddr")) {
             String folderPath = getSingle(args, "addrPath", null);
             service.saveAddressToDB(folderPath);
+        } else if (StringUtils.equals(action, "addrToLevelDb")) {
+            String dbPath = getSingle(args, "dbPath", null);
+            String filePath = getSingle(args, "filePath", null);
+            DB db = LevelDBUtils.openLevelDB(dbPath);
+            service.saveAddressToLevelDB(db, filePath);
+            db.close();
         }
     }
 
@@ -67,6 +75,11 @@ public class AddressAnalyseRunner implements ApplicationRunner {
 //        return executor;
 //    }
 //
+
+    private String getSingle(ApplicationArguments arguments, String name) {
+        return getSingle(arguments, name, null);
+    }
+
     // 读取唯一的一个还这么麻烦
     private String getSingle(ApplicationArguments arguments, String name, String defaultValue) {
         List<String> list = arguments.getOptionValues(name);
