@@ -29,6 +29,7 @@ public class AddressAnalyseRunner implements ApplicationRunner {
 	 * action: parseAddr; parseAddrPath, savePath
 	 * action: removeDuplicate; srcPath, targetPath
 	 * action: addrToLevelDb; dbPath, filePath, heightRange
+	 * action: getSummary; dbPath, heightRange
 	 *
 	 * @param args
 	 * @throws Exception
@@ -59,6 +60,16 @@ public class AddressAnalyseRunner implements ApplicationRunner {
 			int to = Integer.valueOf(ss[1]);
 			DB db = LevelDBUtils.openLevelDB(dbPath);
 			service.saveAddressToLevelDB(db, filePath, from, to);
+			db.close();
+		} else if (StringUtils.equals(action, "getSummary")) {
+			String dbPath = getSingle(args, "dbPath", null);
+			String heightRange = getSingle(args, "heightRange", null);
+			String[] ss = StringUtils.split(heightRange, '-');
+			Assert.isTrue(ss.length == 2, "Invalid arguments: --heightRange");
+			int from = Integer.valueOf(ss[0]);
+			int to = Integer.valueOf(ss[1]);
+			DB db = LevelDBUtils.openLevelDB(dbPath);
+			service.calculateSum(db, from, to);
 			db.close();
 		}
 	}

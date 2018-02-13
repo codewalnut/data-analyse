@@ -7,6 +7,8 @@ import org.junit.Test;
 
 import java.io.File;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -16,7 +18,27 @@ public class LevelDBTest {
     private Charset charset = Charset.forName("UTF-8");
 
     @Test
-    public void tesetDuplicatePut() throws Exception {
+    public void testGetOneAddr() throws Exception {
+        String path = "D:/bitcoin_data/levelDB/leveldb";
+        //重新open新的db
+        DB db = LevelDBUtils.openLevelDB(path);
+
+        List<String> addrs = new ArrayList<>();
+        addrs.add("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa");
+        addrs.add("12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX");
+        addrs.add("1HLoD9E4SDFFPDiYfNYnkBLQ85Y51J3Zb1");
+
+        for (String addr : addrs) {
+            System.out.println("Address: " + addr);
+            System.out.println("余额=" + new String(db.get(("B." + addr).getBytes())));
+            System.out.println("高度=" + new String(db.get(("H." + addr).getBytes())));
+            System.out.println("=========================");
+        }
+        db.close();
+    }
+
+    @Test
+    public void testDuplicatePut() throws Exception {
         String path = "D:/data/leveldb";
         //重新open新的db
         DB db = LevelDBUtils.openLevelDB(path);
