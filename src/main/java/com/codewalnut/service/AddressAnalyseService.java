@@ -46,7 +46,7 @@ public class AddressAnalyseService {
 		}
 
 		int total = 0;
-		for (int i = from; i < to; i++) {
+		for (int i = from; i <= to; i++) {
 			File file = new File(path + i + ".json");
 			saveOneAddressFileToLevelDB(db, file);
 			total++;
