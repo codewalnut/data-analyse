@@ -19,13 +19,14 @@ public class LevelDBTest {
 
     @Test
     public void testGetOneAddr() throws Exception {
-        String path = "D:/bitcoin_data/levelDB";
+        String path = "D:/bitcoin_data/levelDB/leveldb";
         //重新open新的db
         DB db = LevelDBUtils.openLevelDB(path);
 
         List<String> addrs = new ArrayList<>();
         addrs.add("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa");
-        addrs.add("12cbQLTFMXRnSzktFkuoG3eHoMeFtpTu3S");
+        addrs.add("12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX");
+        addrs.add("1HLoD9E4SDFFPDiYfNYnkBLQ85Y51J3Zb1");
 
         for (String addr : addrs) {
             System.out.println("Address: " + addr);
