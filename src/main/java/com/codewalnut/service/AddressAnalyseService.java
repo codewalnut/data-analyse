@@ -196,7 +196,9 @@ public class AddressAnalyseService {
                 }
             }
         }
-        Assert.isTrue(totalIn == totalOut + fee, height + ", Invalid input or output data! totalIn=" + totalIn + ", totalOut=" + totalOut + ", " + fee);
+        if (totalIn != totalOut + fee) {
+            log.error("Invalid block transaction data: totalIn:{} != totalOut:{} + fee:{}", totalIn, totalOut, fee);
+        }
         long end = System.currentTimeMillis();
         log.info("finished block: {}, tx: {}, {}", height, txs.size(), LogUtils.getElapse(bgn, end));
     }
