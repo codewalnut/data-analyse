@@ -8,7 +8,7 @@ import java.util.List;
  */
 //@Entity
 public class Block implements BaseEntity {
-//    @Id
+    //    @Id
 //    @GeneratedValue(strategy = GenerationType.AUTO)
 //    private int id;
 //    @Column(length = 64, unique = true)
@@ -29,8 +29,8 @@ public class Block implements BaseEntity {
 //    @Column
 //    private long bits;
 //    @Column
-//    private long fee;
-//    @Column
+    private long fee;
+    //    @Column
 //    private long nonce;
 //    @JSONField(name = "n_tx")
 //    @Column
@@ -45,7 +45,7 @@ public class Block implements BaseEntity {
 //    private boolean mainChain;
 //    @Column
     private long height;
-//    @JSONField(name = "received_time")
+    //    @JSONField(name = "received_time")
 ////    @Column
 //    @Transient
 //    private long receivedTime;
@@ -112,16 +112,16 @@ public class Block implements BaseEntity {
 //    public void setBits(long bits) {
 //        this.bits = bits;
 //    }
-//
-//    public long getFee() {
-//        return fee;
-//    }
-//
-//    public void setFee(long fee) {
-//        this.fee = fee;
-//    }
-//
-//    public long getNonce() {
+
+    public long getFee() {
+        return fee;
+    }
+
+    public void setFee(long fee) {
+        this.fee = fee;
+    }
+
+    //    public long getNonce() {
 //        return nonce;
 //    }
 //
@@ -168,7 +168,8 @@ public class Block implements BaseEntity {
     public void setHeight(long height) {
         this.height = height;
     }
-//
+
+    //
 //    public long getReceivedTime() {
 //        return receivedTime;
 //    }

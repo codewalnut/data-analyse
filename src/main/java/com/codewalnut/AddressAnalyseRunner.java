@@ -54,12 +54,16 @@ public class AddressAnalyseRunner implements ApplicationRunner {
 			String dbPath = getSingle(args, "dbPath", null);
 			String filePath = getSingle(args, "filePath", null);
 			String heightRange = getSingle(args, "heightRange", null);
+			String withTotalSum = getSingle(args, "withTotalSum", null);
 			String[] ss = StringUtils.split(heightRange, '-');
 			Assert.isTrue(ss.length == 2, "Invalid arguments: --heightRange");
 			int from = Integer.valueOf(ss[0]);
 			int to = Integer.valueOf(ss[1]);
 			DB db = LevelDBUtils.openLevelDB(dbPath);
 			service.saveAddressToLevelDB(db, filePath, from, to);
+			if (StringUtils.equals(withTotalSum, "true")) {
+				service.calculateSum(db, null, null);
+			}
 			db.close();
 		} else if (StringUtils.equals(action, "getSummary")) {
 			String dbPath = getSingle(args, "dbPath", null);

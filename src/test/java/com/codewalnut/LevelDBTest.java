@@ -28,6 +28,13 @@ public class LevelDBTest {
         addrs.add("12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX");
         addrs.add("1HLoD9E4SDFFPDiYfNYnkBLQ85Y51J3Zb1");
 
+//        addrs.add("18BVQDX6QYdeKfXDa1JDUWdRHZfvEewZCF");
+//        addrs.add("1BEAp84rY4U2MJNmUkaF9BNavTEEG3ZSfd");
+//        addrs.add("1AbHNFdKJeVL8FRZyRZoiTzG9VCmzLrtvm");
+//        addrs.add("1Fmjwt8172FZT5XdKnzTUcEEzc1T2MCg2a");
+//        addrs.add("1CbAopr7sNMKjsJa8dAS6P5sM788kmMooo");
+//        addrs.add("1Hr2Pj6p984sZ8eC9333vZTkfZhASTEMPN");
+
         for (String addr : addrs) {
             System.out.println("Address: " + addr);
             System.out.println("余额=" + new String(db.get(("B." + addr).getBytes())));
