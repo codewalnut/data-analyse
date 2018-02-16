@@ -60,10 +60,10 @@ public class AddressAnalyseRunner implements ApplicationRunner {
 			int from = Integer.valueOf(ss[0]);
 			int to = Integer.valueOf(ss[1]);
 			DB db = LevelDBUtils.openLevelDB(dbPath);
-			service.saveAddressToLevelDB(db, filePath, from, to);
-			if (StringUtils.equals(withTotalSum, "true")) {
-				service.calculateSum(db, null, null);
-			}
+			service.saveAddressToLevelDB(db, filePath, from, to, withTotalSum);
+//			if (StringUtils.equals(withTotalSum, "true")) {
+//				service.calculateSum(db, null, null);
+//			}
 			db.close();
 		} else if (StringUtils.equals(action, "getSummary")) {
 			String dbPath = getSingle(args, "dbPath", null);

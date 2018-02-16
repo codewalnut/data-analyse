@@ -58,6 +58,15 @@ public class Transaction implements BaseEntity {
 //		this.blockId = blockId;
 //	}
 //
+
+//	public int getTxIndex() {
+//		return txIndex;
+//	}
+//
+//	public void setTxIndex(int txIndex) {
+//		this.txIndex = txIndex;
+//	}
+
 	public List<Input> getInputs() {
 		return inputs;
 	}

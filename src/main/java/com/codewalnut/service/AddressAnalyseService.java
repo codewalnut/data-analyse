@@ -85,7 +85,7 @@ public class AddressAnalyseService {
     }
 
     // 把路径下的地址文件遍历，然后写入LevelDB
-    public void saveAddressToLevelDB(DB db, String path, int from, int to) {
+    public void saveAddressToLevelDB(DB db, String path, int from, int to, String withTotalSum) {
         log.info("saveAddressToLevelDB path {}, {}, {}", path, from, to);
 
         long bgn = System.currentTimeMillis();
@@ -101,7 +101,14 @@ public class AddressAnalyseService {
         }
         long end = System.currentTimeMillis();
 
-        log.info("saved {} files, {}", total, LogUtils.getElapse(bgn, end));
+        log.info("扫描了{}个文档, {}", total, LogUtils.getElapse(bgn, end));
+        if (StringUtils.equals(withTotalSum, "true")) {
+            try {
+                calculateSum(db, 0, to);
+            } catch (Exception ex) {
+                log.error("", ex);
+            }
+        }
         NotifyUtils.sendWechatMsg("", "完成" + path + ":" + from + "-》" + to + ", " + LogUtils.getElapse(bgn, end), kelvinOpenId);
     }
 
@@ -113,9 +120,13 @@ public class AddressAnalyseService {
         try {
             String json = FileUtils.readFileToString(file, Constants.UTF8);
             List<Block> blocks = JsonUtils.parseArray(json, "blocks", Block.class);
-            block = blocks.get(0);
+            for (Block blk : blocks) {
+                if (blk.isMainChain()) {
+                    block = blk;
+                }
+            }
         } catch (Exception ex) {
-            throw new RuntimeException("Wrong Block File: " + file.getName(), ex);
+            throw new RuntimeException("错误的区块文件: " + file.getName(), ex);
         }
 
         List<Transaction> txs = block.getTx();
@@ -127,16 +138,16 @@ public class AddressAnalyseService {
         boolean coinbaseAppeared = false;
         long totalIn = 0L;
         long totalOut = 0L;
-        for (Transaction transaction : txs) {
+        for (Transaction tx : txs) {
             // 处理input
-            boolean isMiningIncome = false;
-            for (Input input : transaction.getInputs()) {
+            boolean isMining = false;
+            for (Input input : tx.getInputs()) {
                 Output prevOut = input.getPrevOut();
                 if (prevOut == null) {
                     // 一个区块内部应该有且仅有一个coinbase交易
                     Assert.isTrue(!coinbaseAppeared, "wrong transaction(2 coinbase) in block:" + height);
                     coinbaseAppeared = true;
-                    isMiningIncome = true;
+                    isMining = true;
                     continue;
                 }
                 String addr = prevOut.getAddr();
@@ -152,23 +163,23 @@ public class AddressAnalyseService {
                 if (prevBalStr != null) { // 账户已经存在，则做扣减处理
                     long newBal = Long.parseLong(prevBalStr) - val;
                     db.put(keyBal.getBytes(), String.valueOf(newBal).getBytes()); // 更新累加余额
-//					if (StringUtils.equals(addr, "12cbQLTFMXRnSzktFkuoG3eHoMeFtpTu3S")) {
-//						log.error("{}: {} - {} = {}", heightStr, prevBalStr, val, newBal);
-//					}
+					if (StringUtils.equals(addr, "12JLCkkRKKKevxpSmqK58gZKfzTHRRW77K")) {
+						log.error("{}: {} - {} = {}", heightStr, prevBalStr, val, newBal);
+					}
                     if (!StringUtils.equals(prevHeightStr, heightStr)) {
                         db.put(keyHeight.getBytes(), heightStr.getBytes()); // 更新最后高度
                     }
                 } else {
-                    log.error("出现了无余额支付账户:{}", addr);
-                    throw new RuntimeException("出现了无余额的账户进行支付");
+                    //log.error("区块[{}]出现了无余额支付账户:{}", height, addr);
+//                    throw new RuntimeException("出现了无余额的账户进行支付");
                 }
             }
 
             // 处理output
-            for (Output output : transaction.getOut()) {
+            for (Output output : tx.getOut()) {
                 String addr = output.getAddr();
                 long val = output.getValue();
-                if (!isMiningIncome) {
+                if (!isMining) {
                     totalOut += val;
                 }
                 String keyBal = KeyBalance + addr;
@@ -181,26 +192,26 @@ public class AddressAnalyseService {
                 if (prevBalStr != null) { // 账户已经存在，则做累加处理
                     long newBal = Long.parseLong(prevBalStr) + val;
                     db.put(keyBal.getBytes(), String.valueOf(newBal).getBytes()); // 更新累加余额
-//					if (StringUtils.equals(addr, "12cbQLTFMXRnSzktFkuoG3eHoMeFtpTu3S")) {
-//						log.error("{}: {} + {} = {}", heightStr, prevBalStr, val, newBal);
-//					}
+					if (StringUtils.equals(addr, "12JLCkkRKKKevxpSmqK58gZKfzTHRRW77K")) {
+						log.error("{}: {} + {} = {}", heightStr, prevBalStr, val, newBal);
+					}
                     if (!StringUtils.equals(prevHeightStr, heightStr)) {
                         db.put(keyHeight.getBytes(), String.valueOf(height).getBytes()); // 更新最后高度
                     }
                 } else {
-//					if (StringUtils.equals(addr, "12cbQLTFMXRnSzktFkuoG3eHoMeFtpTu3S")) {
-//						log.error("{}: received {}", heightStr, val);
-//					}
+					if (StringUtils.equals(addr, "12JLCkkRKKKevxpSmqK58gZKfzTHRRW77K")) {
+						log.error("{}: received {}", heightStr, val);
+					}
                     db.put(keyBal.getBytes(), String.valueOf(val).getBytes()); // 新增累加余额
                     db.put(keyHeight.getBytes(), heightStr.getBytes()); // 新增最后高度
                 }
             }
         }
         if (totalIn != totalOut + fee) {
-            log.error("Invalid block transaction data: totalIn:{} != totalOut:{} + fee:{}", totalIn, totalOut, fee);
+            log.error("区块[{}]存在非法交易数据: totalIn:{} != totalOut:{} + fee:{}, 交易数:{}, 差额:{}", height, totalIn, totalOut, fee, txs.size(), totalIn - totalOut - fee);
         }
         long end = System.currentTimeMillis();
-        log.info("finished block: {}, tx: {}, {}", height, txs.size(), LogUtils.getElapse(bgn, end));
+        log.info("完成区块[{}], tx: {}, {}", height, txs.size(), LogUtils.getElapse(bgn, end));
     }
 
     // 抽取需要的内容

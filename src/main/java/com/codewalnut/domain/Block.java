@@ -1,5 +1,7 @@
 package com.codewalnut.domain;
 
+import com.alibaba.fastjson.annotation.JSONField;
+
 import java.util.List;
 
 /**
@@ -40,9 +42,9 @@ public class Block implements BaseEntity {
 //    @JSONField(name = "block_index")
 //    @Column
 //    private long blockIndex;
-//    @JSONField(name = "main_chain")
 //    @Column
-//    private boolean mainChain;
+    @JSONField(name = "main_chain")
+    private boolean mainChain;
 //    @Column
     private long height;
     //    @JSONField(name = "received_time")
@@ -152,15 +154,15 @@ public class Block implements BaseEntity {
 //    public void setBlockIndex(long blockIndex) {
 //        this.blockIndex = blockIndex;
 //    }
-//
-//    public boolean isMainChain() {
-//        return mainChain;
-//    }
-//
-//    public void setMainChain(boolean mainChain) {
-//        this.mainChain = mainChain;
-//    }
-//
+
+    public boolean isMainChain() {
+        return mainChain;
+    }
+
+    public void setMainChain(boolean mainChain) {
+        this.mainChain = mainChain;
+    }
+
     public long getHeight() {
         return height;
     }
