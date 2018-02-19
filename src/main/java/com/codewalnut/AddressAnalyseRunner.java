@@ -20,77 +20,93 @@ import java.util.List;
  */
 @Component
 public class AddressAnalyseRunner implements ApplicationRunner {
-	private static Logger log = LoggerFactory.getLogger(AddressAnalyseRunner.class);
+    private static Logger log = LoggerFactory.getLogger(AddressAnalyseRunner.class);
 
-	@Autowired
-	private AddressAnalyseService service;
+    @Autowired
+    private AddressAnalyseService service;
 
-	/**
-	 * action: parseAddr; parseAddrPath, savePath
-	 * action: removeDuplicate; srcPath, targetPath
-	 * action: addrToLevelDb; dbPath, filePath, heightRange
-	 * action: getSummary; dbPath, heightRange
-	 *
-	 * @param args
-	 * @throws Exception
-	 */
-	@Override
-	public void run(ApplicationArguments args) throws Exception {
-		// 参数处理
-		String action = getSingle(args, "action");
-		Assert.isTrue(StringUtils.isNotBlank(action), "--action must be assigned!");
+    /**
+     * action: parseAddr; parseAddrPath, savePath
+     * action: removeDuplicate; srcPath, targetPath
+     * action: addrToLevelDb; dbPath, filePath, heightRange
+     * action: getSummary; dbPath, heightRange
+     *
+     * @param args
+     * @throws Exception
+     */
+    @Override
+    public void run(ApplicationArguments args) throws Exception {
+        // 参数处理
+        String action = getSingle(args, "action");
+        Assert.isTrue(StringUtils.isNotBlank(action), "--action must be assigned!");
 
-		if (StringUtils.equals(action, "parseAddr")) { // 处理解析地址
-			String folderPath = getSingle(args, "parseAddrPath");
-			String savePath = getSingle(args, "savePath", null);
-			Assert.isTrue(StringUtils.isNotBlank(folderPath), "parseAddr mast have argument: --parseAddrPath");
-			service.handleOneFolder(folderPath, savePath);
-		} else if (StringUtils.equals(action, "removeDuplicate")) {
-			String srcPath = getSingle(args, "srcPath", null);
-			String targetPath = getSingle(args, "targetPath", null);
-			Assert.isTrue(StringUtils.isNotBlank(srcPath), "parseAddr mast have argument: --srcPath");
-			service.removeDuplicateAddrForFolder(srcPath, targetPath);
-		} else if (StringUtils.equals(action, "addrToLevelDb")) {
-			String dbPath = getSingle(args, "dbPath", null);
-			String filePath = getSingle(args, "filePath", null);
-			String heightRange = getSingle(args, "heightRange", null);
-			String withTotalSum = getSingle(args, "withTotalSum", null);
-			String[] ss = StringUtils.split(heightRange, '-');
-			Assert.isTrue(ss.length == 2, "Invalid arguments: --heightRange");
-			int from = Integer.valueOf(ss[0]);
-			int to = Integer.valueOf(ss[1]);
-			DB db = LevelDBUtils.openLevelDB(dbPath);
-			service.saveAddressToLevelDB(db, filePath, from, to, withTotalSum);
-//			if (StringUtils.equals(withTotalSum, "true")) {
-//				service.calculateSum(db, null, null);
-//			}
-			db.close();
-		} else if (StringUtils.equals(action, "getSummary")) {
-			String dbPath = getSingle(args, "dbPath", null);
-			String heightRange = getSingle(args, "heightRange", null);
-			String[] ss = StringUtils.split(heightRange, '-');
-			Assert.isTrue(ss.length == 2, "Invalid arguments: --heightRange");
-			int from = Integer.valueOf(ss[0]);
-			int to = Integer.valueOf(ss[1]);
-			DB db = LevelDBUtils.openLevelDB(dbPath);
-			service.calculateSum(db, from, to);
-			db.close();
-		}
-	}
+        if (StringUtils.equals(action, "parseAddr")) { // 处理解析地址
+            String folderPath = getSingle(args, "parseAddrPath");
+            String savePath = getSingle(args, "savePath", null);
+            Assert.isTrue(StringUtils.isNotBlank(folderPath), "parseAddr mast have argument: --parseAddrPath");
+            service.handleOneFolder(folderPath, savePath);
+        } else if (StringUtils.equals(action, "removeDuplicate")) {
+            String srcPath = getSingle(args, "srcPath", null);
+            String targetPath = getSingle(args, "targetPath", null);
+            Assert.isTrue(StringUtils.isNotBlank(srcPath), "parseAddr mast have argument: --srcPath");
+            service.removeDuplicateAddrForFolder(srcPath, targetPath);
+        } else if (StringUtils.equals(action, "addrToLevelDb")) {
+            // 把区块.json文件的地址余额和最后高度信息放到levelDB
+            String dbPath = getSingle(args, "dbPath", null);
+            Assert.isTrue(StringUtils.isNotBlank(dbPath), "Argument --dbPath is required!");
+            String filePath = getSingle(args, "filePath", null);
+            Assert.isTrue(StringUtils.isNotBlank(filePath), "Argument --filePath is required!");
+            String heightRange = getSingle(args, "heightRange", null);
+            String withTotalSum = getSingle(args, "withTotalSum", "false");
+            String[] ss = StringUtils.split(heightRange, '-');
+            Assert.isTrue(ss.length == 2, "Invalid arguments: --heightRange, must in 'from-to'pattern!");
+            int from = Integer.valueOf(ss[0]);
+            int to = Integer.valueOf(ss[1]);
+            DB db = LevelDBUtils.openLevelDB(dbPath);
+            service.saveAddressToLevelDB(db, filePath, from, to, withTotalSum);
+            db.close();
+        } else if (StringUtils.equals(action, "getSummary")) {
+            // 计算统计区间内的地址余额总数和个数
+            String dbPath = getSingle(args, "dbPath", null);
+            Assert.isTrue(StringUtils.isNotBlank(dbPath), "Argument --dbPath is required!");
+            String heightRange = getSingle(args, "heightRange", null);
+            String[] ss = StringUtils.split(heightRange, '-');
+            Assert.isTrue(ss.length == 2, "Invalid arguments: --heightRange, must in 'from-to'pattern!");
+            int from = Integer.valueOf(ss[0]);
+            int to = Integer.valueOf(ss[1]);
+            DB db = LevelDBUtils.openLevelDB(dbPath);
+            service.calculateSum(db, from, to);
+            db.close();
+        } else if (StringUtils.equals(action, "mergeLevelDB")) {
+            // 将后续库的内容整合进基础库
+            String baseDbPath = getSingle(args, "baseDb", null);
+            String accumulateDbPath = getSingle(args, "accumulateDb", null);
+            Assert.isTrue(StringUtils.isNotBlank(baseDbPath), "Arugment --baseDb is required!");
+            Assert.isTrue(StringUtils.isNotBlank(accumulateDbPath), "Arugment --accumulateDb is required!");
+            service.mergeLevelDB(baseDbPath, accumulateDbPath);
+        } else if (StringUtils.equals(action, "addrInfo")) {
+            // 显示指定地址列表的余额和高度信息
+            String[] addrs = StringUtils.split(getSingle(args, "addrs"), ',');
+            Assert.isTrue(addrs.length > 0, "Argument --addrs is required!");
+            String dbPath = getSingle(args, "dbPath", null);
+            Assert.isTrue(StringUtils.isNotBlank(dbPath), "Argument --dbPath is required!");
+            service.showAddrsInfo(dbPath, addrs);
+       }
+    }
 
-	// 解析命令行参数
-	private String getSingle(ApplicationArguments arguments, String name) {
-		return getSingle(arguments, name, null);
-	}
+    // 解析命令行参数
+    private String getSingle(ApplicationArguments arguments, String name) {
+        return getSingle(arguments, name, null);
+    }
 
-	// 解析命令行参数
-	private String getSingle(ApplicationArguments arguments, String name, String defaultValue) {
-		List<String> list = arguments.getOptionValues(name);
-		if (CollectionUtils.isNotEmpty(list)) {
-			return list.get(0);
-		} else {
-			return defaultValue;
-		}
-	}
+    // 解析命令行参数
+    private String getSingle(ApplicationArguments arguments, String name, String defaultValue) {
+        List<String> list = arguments.getOptionValues(name);
+        if (CollectionUtils.isNotEmpty(list)) {
+            return list.get(0);
+        } else {
+            return defaultValue;
+        }
+    }
 
 }

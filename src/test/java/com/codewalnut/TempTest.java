@@ -1,6 +1,5 @@
 package com.codewalnut;
 
-import com.alibaba.fastjson.JSONObject;
 import com.codewalnut.domain.Block;
 import com.codewalnut.utils.Constants;
 import com.saysth.commons.utils.json.JsonUtils;
@@ -17,6 +16,12 @@ import java.util.List;
  */
 public class TempTest {
 	private static Logger log = LoggerFactory.getLogger(TempTest.class);
+
+	@Test
+	public void test1() {
+		long l = 396600000L;
+		System.out.println(String.format("%,d", l));
+	}
 
 	@Test
 	public void test() throws Exception {

@@ -5,7 +5,7 @@
 
     <groupId>com.weway</groupId>
     <artifactId>data-analyse</artifactId>
-    <version>1.2.0</version>
+    <version>1.4.0</version>
     <packaging>jar</packaging>
 
     <name>data-analyse</name>

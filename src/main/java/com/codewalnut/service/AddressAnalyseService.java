@@ -3,15 +3,13 @@ package com.codewalnut.service;
 import com.carrotsearch.sizeof.RamUsageEstimator;
 import com.codewalnut.domain.*;
 import com.codewalnut.utils.Constants;
+import com.codewalnut.utils.LevelDBUtils;
 import com.codewalnut.utils.NotifyUtils;
 import com.saysth.commons.utils.LogUtils;
 import com.saysth.commons.utils.json.JsonUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.iq80.leveldb.DB;
-import org.iq80.leveldb.DBIterator;
-import org.iq80.leveldb.ReadOptions;
-import org.iq80.leveldb.Snapshot;
+import org.iq80.leveldb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -21,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.*;
 
 /**
@@ -32,19 +31,95 @@ public class AddressAnalyseService {
     private static final String TIME = "\"time\":";
     private static final String HEIGHT = "\"height\":";
     private static final String ADDR = "\"addr\":";
+    private static Double BITCOIN_2_CONG = 100000000D;
 
     private static final String KeyBalance = "B."; // B.1KVcqebRwgwRK6PMCrn34KoSRbm7gfXv8B = 120000000
     private static final String KeyHeight = "H."; // H.1KVcqebRwgwRK6PMCrn34KoSRbm7gfXv8B = 370002
     private static final String kelvinOpenId = "oc9byv_N1SwunMRXCN9K13aCIv3w";
 
+    // 显示地址信息
+    public void showAddrsInfo(String dbPath, String[] addrs) throws IOException {
+        DB db = LevelDBUtils.openLevelDB(dbPath);
+        for (String addr : addrs) {
+            byte[] heightBytes = db.get((KeyHeight + addr).getBytes());
+            boolean exists = heightBytes != null;
+
+            if (exists) {
+                byte[] balBytes = db.get((KeyBalance + addr).getBytes());
+                String balStr = (balBytes != null) ? new String(balBytes) : "";
+                BigDecimal addrBal = StringUtils.isNotBlank(balStr) ? toBTC(Long.valueOf(balStr)) : new BigDecimal(0);
+                log.info("==========={}===========", addr);
+                log.info("高度: {}", new String(db.get((KeyHeight + addr).getBytes())));
+                log.info("余额: {}", addrBal);
+            } else {
+                log.info("==========={}===========", addr);
+                log.info("高度: {}", db.get((KeyHeight + addr).getBytes()));
+                log.info("余额: {}", db.get((KeyBalance + addr).getBytes()));
+            }
+        }
+        db.close();
+    }
+
+    // 合并两个数据库的地址余额记录
+    // 假定DB1是基础的一个
+    public void mergeLevelDB(String baseDbPath, String accumulateDbPath) throws IOException {
+        log.info("mergeLevelDB({}, {})", baseDbPath, accumulateDbPath);
+        long bgn = System.currentTimeMillis();
+
+        DB baseDB = LevelDBUtils.openLevelDB(baseDbPath);
+        DB accumulateDB = LevelDBUtils.openLevelDB(accumulateDbPath);
+
+        //读取当前snapshot，快照，读取期间数据的变更，不会反应出来
+        Snapshot snapshot = accumulateDB.getSnapshot();
+        //读选项
+        ReadOptions readOptions = new ReadOptions();
+        readOptions.fillCache(false);//遍历中swap出来的数据，不应该保存在memtable中。
+        readOptions.snapshot(snapshot);//默认snapshot为当前。
+        DBIterator iterator = accumulateDB.iterator(readOptions);
+
+        long totalCnt = 0L;
+        long addressCnt = 0L;
+        WriteBatch writeBatch = baseDB.createWriteBatch();
+        while (iterator.hasNext()) {
+            totalCnt++;
+            if (totalCnt % 100000 == 0) {
+                baseDB.write(writeBatch);
+                log.info("totalCnt:{}", String.format("%,d", totalCnt));
+                writeBatch = baseDB.createWriteBatch();
+            }
+            Map.Entry<byte[], byte[]> item = iterator.next();
+            String key = new String(item.getKey(), Constants.UTF8);
+            String value = new String(item.getValue(), Constants.UTF8);//null,check.
+
+            if (StringUtils.startsWith(key, KeyHeight)) { //是高度记录
+                int height = Integer.parseInt(value);
+                String addr = key.substring(2);
+                String keyBal = KeyBalance + addr;
+                long newBal = Long.parseLong(new String(accumulateDB.get(keyBal.getBytes())));
+                byte[] baseBalBytes = baseDB.get(keyBal.getBytes());
+                long baseBal = (baseBalBytes != null) ? Long.parseLong(new String(baseBalBytes)) : 0L;
+                baseBal += newBal; // 算出合并后的值
+                writeBatch.put(keyBal.getBytes(), String.valueOf(baseBal).getBytes());
+                writeBatch.put((KeyHeight + addr).getBytes(), String.valueOf(height).getBytes());
+                addressCnt++;
+            }
+        }
+        baseDB.write(writeBatch);
+        log.info("totalCnt:{}", String.format("%,d", totalCnt));
+        writeBatch.close();
+        iterator.close();//must be
+        long end = System.currentTimeMillis();
+        baseDB.close();
+        accumulateDB.close();
+
+        log.info("共合并了{}条数据记录，共扫描了{}条数据记录，{}", String.format("%,d", addressCnt), String.format("%,d", totalCnt), LogUtils.getElapse(bgn, end));
+        NotifyUtils.sendWechatMsg("合并完成", "合并" + accumulateDbPath + "到" + baseDbPath + ", " + LogUtils.getElapse(bgn, end), kelvinOpenId);
+    }
+
     // 计算总额
     public long calculateSum(DB db, Integer from, Integer to) throws IOException {
-        if (from == null) {
-            from = Integer.MIN_VALUE;
-        }
-        if (to == null) {
-            to = Integer.MAX_VALUE;
-        }
+        from = (from == null) ? 0 : from;
+        to = (to == null) ? Integer.MAX_VALUE : to;
         log.info("calculateSum({}, {})", from, to);
         Assert.isTrue(from < to, "Invalid arguments! Must ensure from < to");
         long bgn = System.currentTimeMillis();
@@ -62,6 +137,9 @@ public class AddressAnalyseService {
         long sum = 0L;
         while (iterator.hasNext()) {
             totalCnt++;
+            if (totalCnt % 1000000 == 0) {
+                log.info("totalCnt:{}", String.format("%,d", totalCnt));
+            }
             Map.Entry<byte[], byte[]> item = iterator.next();
             String key = new String(item.getKey(), Constants.UTF8);
             String value = new String(item.getValue(), Constants.UTF8);//null,check.
@@ -75,12 +153,12 @@ public class AddressAnalyseService {
                 }
             }
         }
-        sum = sum / 100000000L;
+        log.info("totalCnt:{}", String.format("%,d", totalCnt));
         iterator.close();//must be
         long end = System.currentTimeMillis();
 
-        log.info("计算总额为：{}比特币，共扫描到：{}个钱包地址， 共扫描了{}条数据记录，{}", sum, addressCnt, totalCnt, LogUtils.getElapse(bgn, end));
-//        NotifyUtils.sendWechatMsg("计总完成", "完成" + from + "-》" + to + "计总:" + sum + ", " + LogUtils.getElapse(bgn, end), kelvinOpenId);
+        log.info("区块高度[{} - {}]，总币额为：{}比特币，共扫描到：{}个钱包地址， 共扫描了{}条数据记录，{}", from, to, toBTC(sum), String.format("%,d", addressCnt), String.format("%,d", totalCnt), LogUtils.getElapse(bgn, end));
+        NotifyUtils.sendWechatMsg("计总完成", "完成统计" + from + "-》" + to + "计总:" + sum + ", " + LogUtils.getElapse(bgn, end), kelvinOpenId);
         return sum;
     }
 
@@ -101,7 +179,7 @@ public class AddressAnalyseService {
         }
         long end = System.currentTimeMillis();
 
-        log.info("扫描了{}个文档, {}", total, LogUtils.getElapse(bgn, end));
+        log.info("扫描了{}个文档, {}", String.format("%,d", total), LogUtils.getElapse(bgn, end));
         if (StringUtils.equals(withTotalSum, "true")) {
             try {
                 calculateSum(db, 0, to);
@@ -163,15 +241,20 @@ public class AddressAnalyseService {
                 if (prevBalStr != null) { // 账户已经存在，则做扣减处理
                     long newBal = Long.parseLong(prevBalStr) - val;
                     db.put(keyBal.getBytes(), String.valueOf(newBal).getBytes()); // 更新累加余额
-					if (StringUtils.equals(addr, "12JLCkkRKKKevxpSmqK58gZKfzTHRRW77K")) {
-						log.error("{}: {} - {} = {}", heightStr, prevBalStr, val, newBal);
-					}
+//					if (StringUtils.equals(addr, "12JLCkkRKKKevxpSmqK58gZKfzTHRRW77K")) {
+//						log.error("{}: {} - {} = {}", heightStr, prevBalStr, val, newBal);
+//					}
                     if (!StringUtils.equals(prevHeightStr, heightStr)) {
                         db.put(keyHeight.getBytes(), heightStr.getBytes()); // 更新最后高度
                     }
                 } else {
                     //log.error("区块[{}]出现了无余额支付账户:{}", height, addr);
 //                    throw new RuntimeException("出现了无余额的账户进行支付");
+                    long newBal = 0 - val;
+                    db.put(keyBal.getBytes(), String.valueOf(newBal).getBytes()); // 更新累加余额
+                    if (!StringUtils.equals(prevHeightStr, heightStr)) {
+                        db.put(keyHeight.getBytes(), heightStr.getBytes()); // 更新最后高度
+                    }
                 }
             }
 
@@ -192,16 +275,16 @@ public class AddressAnalyseService {
                 if (prevBalStr != null) { // 账户已经存在，则做累加处理
                     long newBal = Long.parseLong(prevBalStr) + val;
                     db.put(keyBal.getBytes(), String.valueOf(newBal).getBytes()); // 更新累加余额
-					if (StringUtils.equals(addr, "12JLCkkRKKKevxpSmqK58gZKfzTHRRW77K")) {
-						log.error("{}: {} + {} = {}", heightStr, prevBalStr, val, newBal);
-					}
+//					if (StringUtils.equals(addr, "12JLCkkRKKKevxpSmqK58gZKfzTHRRW77K")) {
+//						log.error("{}: {} + {} = {}", heightStr, prevBalStr, val, newBal);
+//					}
                     if (!StringUtils.equals(prevHeightStr, heightStr)) {
                         db.put(keyHeight.getBytes(), String.valueOf(height).getBytes()); // 更新最后高度
                     }
                 } else {
-					if (StringUtils.equals(addr, "12JLCkkRKKKevxpSmqK58gZKfzTHRRW77K")) {
-						log.error("{}: received {}", heightStr, val);
-					}
+//					if (StringUtils.equals(addr, "12JLCkkRKKKevxpSmqK58gZKfzTHRRW77K")) {
+//						log.error("{}: received {}", heightStr, val);
+//					}
                     db.put(keyBal.getBytes(), String.valueOf(val).getBytes()); // 新增累加余额
                     db.put(keyHeight.getBytes(), heightStr.getBytes()); // 新增最后高度
                 }
@@ -384,6 +467,11 @@ public class AddressAnalyseService {
         log.debug("found {} addrs in {}, {}", addrSet.size(), file.getName(), LogUtils.getElapse(bgn, end));
 //        log.debug("Set Size: {}", RamUsageEstimator.humanSizeOf(addrSet));
         return result;
+    }
+
+    // 转换聪为比特币单位
+    private BigDecimal toBTC(long value) {
+        return BigDecimal.valueOf(value / BITCOIN_2_CONG);
     }
 
 }
