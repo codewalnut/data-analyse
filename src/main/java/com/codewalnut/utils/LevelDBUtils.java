@@ -21,7 +21,7 @@ public class LevelDBUtils {
         if (cleanup) {
             factory.destroy(dir, null);//清除文件夹内的所有文件。
         }
-        Options options = new Options().createIfMissing(true).maxOpenFiles(1000*10).writeBufferSize(4194304*16);
+        Options options = new Options().createIfMissing(true).maxOpenFiles(1000*10).writeBufferSize(4194304*16).cacheSize(4194304);
         //重新open新的db
         return factory.open(dir, options);
     }
