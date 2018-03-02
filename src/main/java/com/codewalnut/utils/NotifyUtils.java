@@ -10,11 +10,19 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * 通知工具
  * Created by zhqpe on 2018-02-09.
  */
 public class NotifyUtils {
 	private static Logger log = LoggerFactory.getLogger(NotifyUtils.class);
 
+	/**
+	 * 通过微信公众号进行通知
+	 * 
+	 * @param title
+	 * @param content
+	 * @param openId
+	 */
 	public static void sendWechatMsg(String title, String content, String openId) {
 		Assert.isTrue(StringUtils.isNotBlank(openId), "Missing openId");
 		title = StringUtils.defaultIfBlank(title, "消息通知");

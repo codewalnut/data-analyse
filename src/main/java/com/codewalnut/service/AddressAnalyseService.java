@@ -23,22 +23,46 @@ import java.math.BigDecimal;
 import java.util.*;
 
 /**
+ * 地址分析服务
+ *
  * Created by Weway-RG001 on 2018-02-06 22:34.
  */
 @Service
 public class AddressAnalyseService {
     private Logger log = LoggerFactory.getLogger(AddressAnalyseService.class);
+
+    /* 定义json文件里面的识别特征字符串 */
     private static final String TIME = "\"time\":";
     private static final String HEIGHT = "\"height\":";
     private static final String ADDR = "\"addr\":";
-    private static Double BITCOIN_2_CONG = 100000000D;
+    /* 定义json文件里面的识别特征字符串 */
 
+    private static Double BITCOIN_2_CONG = 100000000D; // 一比特币折合多少聪
+
+    /* levelDB的key前缀 */
     private static final String KeyBalance = "B."; // B.1KVcqebRwgwRK6PMCrn34KoSRbm7gfXv8B = 120000000
     private static final String KeyHeight = "H."; // H.1KVcqebRwgwRK6PMCrn34KoSRbm7gfXv8B = 370002
+    /* levelDB的key前缀 */
+
     private static final String kelvinOpenId = "oc9byv_N1SwunMRXCN9K13aCIv3w";
 
-    // 显示地址信息
-    public void showAddrsInfo(String dbPath, String[] addrs) throws IOException {
+    private String getString(byte[] bytes, String defaultValue) {
+        return bytes != null ? new String(bytes) : defaultValue;
+    }
+
+    public BigDecimal getBigDecimal(byte[] bytes, BigDecimal defaultValue) {
+        String s = getString(bytes, "0");
+        return new BigDecimal(s);
+    }
+
+    /**
+     * 显示指定地址的余额信息
+     *
+     * @param dbPath levelDB数据库路径
+     * @param addrs 地址列表
+     * @throws IOException
+     */
+    public void showAddrsInfo(String dbPath, String... addrs) throws IOException {
         DB db = LevelDBUtils.openLevelDB(dbPath);
         for (String addr : addrs) {
             byte[] heightBytes = db.get((KeyHeight + addr).getBytes());
@@ -46,7 +70,7 @@ public class AddressAnalyseService {
 
             if (exists) {
                 byte[] balBytes = db.get((KeyBalance + addr).getBytes());
-                String balStr = (balBytes != null) ? new String(balBytes) : "";
+                String balStr = getString(balBytes,"");
                 BigDecimal addrBal = StringUtils.isNotBlank(balStr) ? toBTC(Long.valueOf(balStr)) : new BigDecimal(0);
                 log.info("==========={}===========", addr);
                 log.info("高度: {}", new String(db.get((KeyHeight + addr).getBytes())));

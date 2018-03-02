@@ -9,9 +9,18 @@ import java.io.File;
 import java.io.IOException;
 
 /**
+ * LevelDB数据库工具类
  * Created by Weway-RG001 on 2018-02-12 16:56.
  */
 public class LevelDBUtils {
+
+    /**
+     * 打开一个levelDB数据库，如果不存在则自动创建
+     *
+     * @param dbPath
+     * @return
+     * @throws IOException
+     */
     public static DB openLevelDB(String dbPath) throws IOException {
         boolean cleanup = false;
         //init
