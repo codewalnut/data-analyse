@@ -1,6 +1,5 @@
 package com.codewalnut.service;
 
-import com.codewalnut.service.AddressAnalyseService;
 import org.junit.Test;
 
 /**
@@ -19,7 +18,7 @@ public class AddressAnalyseServiceTest {
 
 	@Test
 	public void testHandleOneFolder() throws Exception {
-		service.handleOneFolder("D:\\bitcoin_data\\test", null);
+		//service.handleOneFolder("D:\\bitcoin_data\\test", null);
 	}
 
 }

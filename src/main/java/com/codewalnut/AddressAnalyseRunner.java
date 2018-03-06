@@ -40,17 +40,7 @@ public class AddressAnalyseRunner implements ApplicationRunner {
         String action = getSingle(args, "action");
         Assert.isTrue(StringUtils.isNotBlank(action), "--action must be assigned!");
 
-        if (StringUtils.equals(action, "parseAddr")) { // 处理解析地址
-            String folderPath = getSingle(args, "parseAddrPath");
-            String savePath = getSingle(args, "savePath", null);
-            Assert.isTrue(StringUtils.isNotBlank(folderPath), "parseAddr mast have argument: --parseAddrPath");
-            service.handleOneFolder(folderPath, savePath);
-        } else if (StringUtils.equals(action, "removeDuplicate")) {
-            String srcPath = getSingle(args, "srcPath", null);
-            String targetPath = getSingle(args, "targetPath", null);
-            Assert.isTrue(StringUtils.isNotBlank(srcPath), "parseAddr mast have argument: --srcPath");
-            service.removeDuplicateAddrForFolder(srcPath, targetPath);
-        } else if (StringUtils.equals(action, "addrToLevelDb")) {
+        if (StringUtils.equals(action, "addrToLevelDb")) {
             // 把区块.json文件的地址余额和最后高度信息放到levelDB
             String dbPath = getSingle(args, "dbPath", null);
             Assert.isTrue(StringUtils.isNotBlank(dbPath), "Argument --dbPath is required!");
@@ -62,9 +52,8 @@ public class AddressAnalyseRunner implements ApplicationRunner {
             Assert.isTrue(ss.length == 2, "Invalid arguments: --heightRange, must in 'from-to'pattern!");
             int from = Integer.valueOf(ss[0]);
             int to = Integer.valueOf(ss[1]);
-            DB db = LevelDBUtils.openLevelDB(dbPath);
-            service.saveAddressToLevelDB(db, filePath, from, to, withTotalSum);
-            db.close();
+            service.saveAddressToLevelDB(dbPath, filePath, from, to, withTotalSum);
+
         } else if (StringUtils.equals(action, "getSummary")) {
             // 计算统计区间内的地址余额总数和个数
             String dbPath = getSingle(args, "dbPath", null);
@@ -77,6 +66,7 @@ public class AddressAnalyseRunner implements ApplicationRunner {
             DB db = LevelDBUtils.openLevelDB(dbPath);
             service.calculateSum(db, from, to);
             db.close();
+
         } else if (StringUtils.equals(action, "mergeLevelDB")) {
             // 将后续库的内容整合进基础库
             String baseDbPath = getSingle(args, "baseDb", null);
@@ -84,6 +74,7 @@ public class AddressAnalyseRunner implements ApplicationRunner {
             Assert.isTrue(StringUtils.isNotBlank(baseDbPath), "Arugment --baseDb is required!");
             Assert.isTrue(StringUtils.isNotBlank(accumulateDbPath), "Arugment --accumulateDb is required!");
             service.mergeLevelDB(baseDbPath, accumulateDbPath);
+
         } else if (StringUtils.equals(action, "addrInfo")) {
             // 显示指定地址列表的余额和高度信息
             String[] addrs = StringUtils.split(getSingle(args, "addrs"), ',');
@@ -91,7 +82,7 @@ public class AddressAnalyseRunner implements ApplicationRunner {
             String dbPath = getSingle(args, "dbPath", null);
             Assert.isTrue(StringUtils.isNotBlank(dbPath), "Argument --dbPath is required!");
             service.showAddrsInfo(dbPath, addrs);
-       }
+        }
     }
 
     // 解析命令行参数
